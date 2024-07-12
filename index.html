@@ -345,11 +345,11 @@
 					for (let i = 0; i < 42; i++) this.territories[i].draw();
 				}
 				async doSetup() {
-					for (let i = 0; i < /*42*/8; i++) {
+					for (let i = 0; i < 42; i++) {
 						await this.players[i % 4].addTerritory();
 					}
 					alert("time for reinforcements.");
-					for (let i = 0; i < /*78*/4; i++) {
+					for (let i = 0; i < 78; i++) {
 						await this.players[(i + 2) % 4].addTroopToTerritory();
 					}
 					alert("Ready to play.");
@@ -608,8 +608,8 @@
 				async doTurn() {
 					this.displayCards();
 					await this.doReinforcements();
-					//await this.doAttacking();
-					//await this.doTroopMovements();
+					await this.doAttacking();
+					await this.doTroopMovements();
 					await this.drawRiskCard();
 					return;
 				}

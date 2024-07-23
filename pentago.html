@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>
+			Pentago &#8212; get 5 in a row!
+		</title>
+		<style>
+			canvas {
+				border: 1px solid black;
+				background-color: white;
+			}
+			body {
+				margin: 0;
+				background-color: #f0f0f0;
+			}
+		</style>
+	</head>
+	<body>
+		<img id="clockwise" src="clockwise.png" style="display: block;" width="1" height="2">
+		<img id="counterclockwise" src="counterclockwise.png" style="display: nonblock;" width="1" height="2">
+
+		<canvas id="canvas" width="500" height="500"></canvas>
+		<br>
+		<button id="skip">skip rotations</button>
+		<script>
+			const canvas = document.getElementById("canvas");
+			const ctx = canvas.getContext("2d");
+			ctx.beginPath();
+			ctx.moveTo(250, 0);
+			ctx.lineTo(250, 500);
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.moveTo(0, 250);
+			ctx.lineTo(500, 250);
+			ctx.stroke();
+
+			class Spot {
+				constructor(y, x, squareX, squareY) {
+					this.x = x;
+					this.y = y;
+					this.squareX = squareX;
+					this.squareY = squareY;
+					this.n = this.x * 3 + this.y;
+					this.color = "gray";
+				}
+				draw() {
+					ctx.beginPath();
+					ctx.arc(this.squareX + this.x * 80 + 40, this.squareY + this.y * 80 + 40, 20, 0, 2 * Math.PI);
+					ctx.fillStyle = "gray";
+					ctx.fill();
+					ctx.fillStyle = this.color;
+					ctx.beginPath();
+					ctx.arc(this.squareX + this.x * 80 + 40, this.squareY + this.y * 80 + 40, 15, 0, 2 * Math.PI);
+					ctx.fill();
+				}
+				clockwise() {
+					let x = this.x;
+					let y = this.y;
+					this.x = 2 - y;
+					this.y = x;
+				}
+				counterclockwise() {
+					let x = this.x;
+					let y = this.y;
+					this.x = y;
+					this.y = 2 - x;
+				}
+				isClicked(x, y) {
+					if (this.color != "gray") return false;
+					if ((x - (this.squareX + this.x * 80 + 40))**2 + (y - (this.squareY + this.y * 80 + 40))**2 < 401) {
+						return true;
+					}
+					return false;
+				}
+			}
+
+			class Square {
+				constructor(x, y) {
+					this.x = x;
+					this.y = y;
+					this.spots = [];
+				}
+				makeSpots() {
+					for (let i = 0; i < 3; i++) {
+						this.spots.push([]);
+						for (let j = 0; j < 3; j++) {
+							this.spots[i].push(new Spot(j, i, this.x, this.y));
+						}
+					}
+				}
+				drawAll() {
+					for (let i = 0; i < 3; i++) {
+						for (let j = 0; j < 3; j++) {
+							this.spots[i][j].draw();
+						}
+					}
+					ctx.drawImage(document.getElementById("clockwise"), this.x + 100, this.y + 140, 60, 30);
+					ctx.drawImage(document.getElementById("counterclockwise"), this.x + 100, this.y + 60, 60, 30);
+				}
+				rotateCounterClockwise() {
+					for (let i = 0; i < 3; i++) {
+						for (let j = 0; j < 3; j++) {
+							this.spots[i][j].clockwise();
+						}
+					}
+				}
+				rotateClockwise() {
+					for (let i = 0; i < 3; i++) {
+						for (let j = 0; j < 3; j++) {
+							this.spots[i][j].counterclockwise();
+						}
+					}
+				}
+				checkIfAnyClicked(x, y, c) {
+					for (let i = 0; i < 3; i++) {
+						for (let j = 0; j < 3; j++) {
+							if (this.spots[i][j].isClicked(x, y)) {
+								this.spots[i][j].color = c;
+								return true;
+							}
+						}
+					}
+					return false;
+				}
+				checkIfAnyRotated(x, y) {
+					if (x > this.x + 100 && x < this.x + 160 && y > this.y + 140 && y < this.y + 170) {
+						this.rotateClockwise();
+						return true;
+					} else {
+						if (x > this.x + 100 && x < this.x + 160 && y > this.y + 60 && y < this.y + 90) {
+							this.rotateCounterClockwise();
+							return true;
+						}
+					}
+					return false;
+				}
+				getSpot(x, y) {
+					for (let i = 0; i < 3; i++) {
+						for (let j = 0; j < 3; j++) {
+							if (this.spots[i][j].x == x && this.spots[i][j].y == y) {
+								return this.spots[i][j].color;
+							}
+						}
+					}
+				}
+			}
+			class Board {
+				constructor() {
+					this.squares = [new Square(0, 0), new Square(0, 250), new Square(250, 0), new Square(250, 250)];
+				}
+				init() {
+					for (let i = 0; i < 4; i++) {
+						this.squares[i].makeSpots();
+						this.squares[i].drawAll();
+					}
+				}
+				checkIfAnyClicked(x, y, c) {
+					for (let i = 0; i < 4; i++) {
+						if (this.squares[i].checkIfAnyClicked(x, y, c)) return true;
+					}
+					return false;
+				}
+				checkIfAnyRotated(x, y) {
+					for (let i = 0; i < 4; i++) {
+						if (this.squares[i].checkIfAnyRotated(x, y)) return true;
+					}
+					return false;
+				}
+				drawAll() {
+					for (let i = 0; i < 4; i++) {
+						this.squares[i].drawAll();
+					}
+				}
+				async addStone(c) {
+					let done = false;
+					return new Promise(
+						(resolve, reject) => {
+							addEventListener("click", (e) => {
+								if (done) return;
+								if (this.checkIfAnyClicked(e.clientX, e.clientY, c)) {
+									this.drawAll();
+									done = true;
+									resolve();
+								}
+							});
+						}
+					);
+				}
+				async rotate() {
+					let done = false;
+					return new Promise(
+						(resolve, reject) => {
+							document.getElementById("skip").addEventListener("click", () => {if (done) return; done = true; resolve();});
+							addEventListener("click", (e) => {
+								if (done) return;
+								if (this.checkIfAnyRotated(e.clientX, e.clientY)) {
+									this.drawAll();
+									done = true;
+									resolve();
+								}
+							});
+						}
+					);
+				}
+				async runGame() {
+					for (let blacksTurn = true; true; blacksTurn = ! blacksTurn) {
+						await this.addStone((blacksTurn) ? "black" : "red");
+						await this.rotate();
+						if (this.checkForWin()) {
+							return;
+						}
+					}
+				}
+				getSpot(x, y) {
+					return this.getSpot2(x, y);
+				}
+				getSpot2(x, y) {
+					if (x < 3) {
+						if (y < 3) return this.squares[0].getSpot(x, y);
+						else return this.squares[1].getSpot(x, y - 3);
+					} else {
+						if (y < 3) return this.squares[2].getSpot(x - 3, y);
+						else return this.squares[3].getSpot(x - 3, y - 3);
+					}
+				}
+
+				checkRow(row) {
+					let c;
+					for (let i = 1; i < 5; i++) {
+						if (c) {
+							if (c != this.getSpot(i, row)) {
+								return false;
+							}
+						}
+						else {
+							c = this.getSpot(i, row);
+						}
+					}
+					if (this.getSpot(0, row) == c || this.getSpot(5, row) == c) {
+						return c;
+					}
+					return false;
+				}
+				checkColumn(column) {
+					let c;
+					for (let i = 1; i < 5; i++) {
+						if (c) {
+							if (c != this.getSpot(column, i)) {
+								return false;
+							}
+						}
+						else {
+							c = this.getSpot(column, i);
+						}
+					}
+					if (this.getSpot(column, 0) == c || this.getSpot(column, 5) == c) {
+						return c;
+					}
+					return false;
+				}
+				checkLongDiagonal1() {
+					let c;
+					for (let i = 1; i < 5; i++) {
+						if (c) {
+							if (c != this.getSpot(i, i)) {
+								return false;
+							}
+						}
+						else {
+							c = this.getSpot(i, i);
+						}
+					}
+					if (this.getSpot(0, 0) == c || this.getSpot(5, 5) == c) {
+						return c;
+					}
+					return false;
+				}
+				checkShortDiagonal1() {
+					let c;
+					for (let i = 1; i < 6; i++) {
+						if (c) {if (c != this.getSpot(i, i - 1)) return false;}
+						else c = this.getSpot(i, i-1);
+					}
+					return c;
+				}
+				checkLongDiagonal2() {
+					let c;
+					for (let i = 1; i < 5; i++) {
+						if (c) {if (c != this.getSpot(i, i)) return false;}
+						else c = this.getSpot(i, i);
+					}
+					if (this.getSpot(0, 0) == c || this.getSpot(5, 5) == c) {
+						return c;
+					}
+					return false;
+				}
+				checkShortDiagonal2() {
+					let c;
+					for (let i = 1; i < 6; i++) {
+						if (c) {if (c != this.getSpot(i - 1, i)) return false;}
+						else c = this.getSpot(i - 1, i);
+					}
+					return c;
+				}
+				checkShortDiagonal3() {
+					let c;
+					for (let i = 0; i < 5; i++) {
+						if (c) {if (c != this.getSpot(i, 4 - i)) return false;}
+						else c = this.getSpot(i, 4 - i);
+					}
+					return c;
+				}
+				checkShortDiagonal4() {
+					let c;
+					for (let i = 1; i < 6; i++) {
+						if (c) {if (c != this.getSpot(i, 6 - i)) return false;}
+						else c = this.getSpot(i, 6 - i);
+					}
+					return c;
+				}
+				checkForWin() {
+					let r;
+					for (let i = 0; i < 6; i++) {
+						r = this.checkRow(i);
+						if (r && r != "gray") {
+							alert(r + " wins!");
+							return true;
+						}
+						r = this.checkColumn(i);
+						if (r && r != "gray") {
+							alert(r + " wins!");
+							return true;
+						}
+					}
+					r = this.checkLongDiagonal1();
+					if (r && r != "gray") {
+						alert(r + " wins!");
+						return true;
+					}
+					r = this.checkLongDiagonal2();
+					if (r && r != "gray") {
+						alert(r + " wins!");
+						return true;
+					}
+					r = this.checkShortDiagonal1();
+					if (r && r != "gray") {
+						alert(r + " wins!");
+						return true;
+					}
+					r = this.checkShortDiagonal2();
+					if (r && r != "gray") {
+						alert(r + " wins!");
+						return true;
+					}
+					r = this.checkShortDiagonal3();
+					if (r && r != "gray") {
+						alert(r + " wins!");
+						return true;
+					}
+					r = this.checkShortDiagonal4();
+					if (r && r != "gray") {
+						alert(r + " wins!");
+						return true;
+					}
+					return false;
+				}
+			}
+
+
+			
+			async function waitForStart() {
+				return new Promise(
+					(resolve, reject) => {
+						done1 = false;
+						done2 = false;
+						document.getElementById("clockwise").addEventListener(
+							"load", 
+							() => {
+								done1 = true; 
+								if (done2) resolve();
+							}
+						);
+						document.getElementById("counterclockwise").addEventListener(
+							"load", 
+							() => {
+								done2 = true; 
+								if (done1) resolve();
+							}
+						);
+					}
+				);
+			}
+			
+			let b = new Board();
+			async function run() {
+				await waitForStart();
+				b.init();
+				b.runGame();
+			}
+			run();
+		</script>
+	</body>
+</html>
